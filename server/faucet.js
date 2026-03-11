@@ -29,6 +29,15 @@ const NETWORKS = {
     getRpc:     () => process.env.PUSHCHAIN_RPC_URL || 'https://evm.donut.rpc.push.org/',
     getAmount:  () => parseFloat(process.env.PUSHCHAIN_CLAIM_AMOUNT || '1'),
   },
+  republic: {
+  name:      'Republic AI',
+  chainId:   77701n,
+  symbol:    'RAI',             // sesuaikan sama symbol token-nya
+  explorer:  'https://explorer-republic.provewithryd.xyz', // sesuaikan
+  logo:      'public/networks/republicai.jpg',
+  getRpc:    () => process.env.REPUBLIC_RPC_URL || 'https://testnet-rpc-republic.provewithryd.xyz',
+  getAmount: () => parseFloat(process.env.REPUBLIC_CLAIM_AMOUNT || '1'),
+},
 };
 
 function getPrivKey()    { return process.env.FAUCET_PRIVATE_KEY; }
