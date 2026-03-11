@@ -112,10 +112,11 @@ async function verifyTurnstile(token, remoteIp) {
 app.get('/api/networks', (req, res) => {
   const list = Object.entries(faucet.NETWORKS).map(([id, net]) => ({
     id,
-    name:    net.name,
-    symbol:  net.symbol,
-    chainId: Number(net.chainId),
-    explorer: net.explorer,
+    name:        net.name,
+    symbol:      net.symbol,
+    chainId:     Number(net.chainId),
+    explorer:    net.explorer,
+    logo:        net.logo || `public/networks/${id}.svg`,  // ← tambah ini
     claimAmount: net.getAmount(),
   }));
   res.json(list);

@@ -7,42 +7,43 @@
 const API_BASE = window.location.origin;
 
 /* ─── State ─── */
-let turnstileToken  = null;
-let isLoading       = false;
-let currentNetwork  = 'sepolia';
-let networksConfig  = {}; // populated from /api/networks
+let turnstileToken = null;
+let isLoading      = false;
+let currentNetwork = 'sepolia';
+let networksConfig = {};
 
 /* ─── DOM ─── */
-const themeToggle        = document.getElementById('themeToggle');
-const iconSun            = document.getElementById('iconSun');
-const iconMoon           = document.getElementById('iconMoon');
-const walletInput        = document.getElementById('walletAddress');
-const walletError        = document.getElementById('walletError');
-const claimBtn           = document.getElementById('claimBtn');
-const claimBtnText       = document.getElementById('claimBtnText');
-const resultPanel        = document.getElementById('resultPanel');
-const refreshBtn         = document.getElementById('refreshBtn');
-const statBalance        = document.getElementById('statBalance');
-const statDistrib        = document.getElementById('statDistributed');
-const statClaims         = document.getElementById('statClaims');
-const statBalanceLabel   = document.getElementById('statBalanceLabel');
-const statDistribLabel   = document.getElementById('statDistributedLabel');
-const toast              = document.getElementById('toast');
-const toastMsg           = document.getElementById('toastMsg');
-const toastIcon          = document.getElementById('toastIcon');
-const networkSelect      = document.getElementById('networkSelect');
-const headerNetworkName  = document.getElementById('headerNetworkName');
-const amountValue        = document.getElementById('amountValue');
-const amountSubtext      = document.getElementById('amountSubtext');
-const footerExplorerLink = document.getElementById('footerExplorerLink');
+const themeToggle       = document.getElementById('themeToggle');
+const iconSun           = document.getElementById('iconSun');
+const iconMoon          = document.getElementById('iconMoon');
+const walletInput       = document.getElementById('walletAddress');
+const walletError       = document.getElementById('walletError');
+const claimBtn          = document.getElementById('claimBtn');
+const claimBtnText      = document.getElementById('claimBtnText');
+const resultPanel       = document.getElementById('resultPanel');
+const refreshBtn        = document.getElementById('refreshBtn');
+const statBalance       = document.getElementById('statBalance');
+const statDistrib       = document.getElementById('statDistributed');
+const statClaims        = document.getElementById('statClaims');
+const statBalanceLabel  = document.getElementById('statBalanceLabel');
+const statDistribLabel  = document.getElementById('statDistributedLabel');
+const toast             = document.getElementById('toast');
+const toastMsg          = document.getElementById('toastMsg');
+const toastIcon         = document.getElementById('toastIcon');
+const headerNetworkName = document.getElementById('headerNetworkName');
+const footerExplorerLink= document.getElementById('footerExplorerLink');
+
+// Custom dropdown elements
+const customSelect  = document.getElementById('customSelect');
+const selectTrigger = document.getElementById('selectTrigger');
+const selectOptions = document.getElementById('selectOptions');
+const selectedLogo  = document.getElementById('selectedLogo');
+const selectedName  = document.getElementById('selectedName');
+const selectedAmount= document.getElementById('selectedAmount');
 
 /* ─────────────────────────────────────────
    THEME
 ───────────────────────────────────────── */
-function getTheme() {
-  return localStorage.getItem('faucet-theme') ||
-    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-}
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   iconSun.classList.toggle('hidden', theme === 'light');
@@ -52,50 +53,106 @@ function applyTheme(theme) {
 themeToggle.addEventListener('click', () => {
   applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 });
-applyTheme(getTheme());
+applyTheme(
+  localStorage.getItem('faucet-theme') ||
+  (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+);
+
+/* ─────────────────────────────────────────
+   CUSTOM DROPDOWN
+───────────────────────────────────────── */
+
+/** Build dropdown options from networksConfig */
+function buildDropdownOptions() {
+  selectOptions.innerHTML = '';
+  Object.entries(networksConfig).forEach(([id, net]) => {
+    const li = document.createElement('li');
+    li.className = 'custom-select__option' + (id === currentNetwork ? ' selected' : '');
+    li.setAttribute('role', 'option');
+    li.setAttribute('data-value', id);
+    li.setAttribute('aria-selected', id === currentNetwork ? 'true' : 'false');
+    li.innerHTML = `
+      <img class="net-logo" src="${net.logo || `public/networks/${id}.svg`}"
+           width="28" height="28" onerror="this.style.display='none'" />
+      <div class="net-info">
+        <span class="net-name">${net.name}</span>
+      </div>
+      <span class="net-amount">${net.claimAmount} ${net.symbol}</span>
+    `;
+    li.addEventListener('click', () => selectNetwork(id));
+    selectOptions.appendChild(li);
+  });
+}
+
+/** Open / close dropdown */
+function toggleDropdown(force) {
+  const isOpen = customSelect.getAttribute('aria-expanded') === 'true';
+  const open   = force !== undefined ? force : !isOpen;
+  customSelect.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+selectTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleDropdown();
+});
+
+// Keyboard nav
+customSelect.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDropdown(); }
+  if (e.key === 'Escape') toggleDropdown(false);
+});
+
+// Close on outside click
+document.addEventListener('click', () => toggleDropdown(false));
+
+/** Select a network */
+function selectNetwork(networkId) {
+  currentNetwork = networkId;
+  toggleDropdown(false);
+
+  // Update trigger display
+  const net = networksConfig[networkId];
+  selectedLogo.src = net.logo || `public/networks/${networkId}.svg`;
+  selectedLogo.alt         = net.name;
+  selectedName.textContent  = net.name;
+  selectedAmount.textContent = `${net.claimAmount} ${net.symbol} per request`;
+
+  // Mark selected in list
+  selectOptions.querySelectorAll('.custom-select__option').forEach(opt => {
+    const isSelected = opt.dataset.value === networkId;
+    opt.classList.toggle('selected', isSelected);
+    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+  });
+
+  updateUIForNetwork(networkId);
+
+  // Reset captcha
+  if (window.turnstile) window.turnstile.reset();
+  turnstileToken = null;
+}
+
+/* ─────────────────────────────────────────
+   NETWORK UI UPDATE
+───────────────────────────────────────── */
+function updateUIForNetwork(networkId) {
+  const net = networksConfig[networkId];
+  if (!net) return;
+
+  headerNetworkName.textContent  = net.name;
+  claimBtnText.textContent       = `Request ${net.claimAmount} ${net.symbol}`;
+  statBalanceLabel.textContent   = `Balance (${net.symbol})`;
+  statDistribLabel.textContent   = `${net.symbol} Distributed`;
+  footerExplorerLink.href        = net.explorer;
+
+  hideResult();
+  fetchStats();
+}
 
 /* ─────────────────────────────────────────
    TURNSTILE
 ───────────────────────────────────────── */
 window.onTurnstileSuccess = (token) => { turnstileToken = token; };
 window.onTurnstileExpired = ()      => { turnstileToken = null; };
-
-/* ─────────────────────────────────────────
-   NETWORK SWITCHING
-───────────────────────────────────────── */
-function updateUIForNetwork(networkId) {
-  const net = networksConfig[networkId];
-  if (!net) return;
-  currentNetwork = networkId;
-
-  // Header badge
-  headerNetworkName.textContent = net.name;
-
-  // Amount display
-  amountValue.textContent  = `${net.claimAmount} ${net.symbol}`;
-  amountSubtext.textContent = `per request · ${net.name}`;
-
-  // Claim button
-  claimBtnText.textContent = `Request ${net.claimAmount} ${net.symbol}`;
-
-  // Stats labels
-  statBalanceLabel.textContent  = `Balance (${net.symbol})`;
-  statDistribLabel.textContent  = `${net.symbol} Distributed`;
-
-  // Footer explorer
-  footerExplorerLink.href = net.explorer;
-
-  // Clear result & reset stats
-  hideResult();
-  fetchStats();
-}
-
-networkSelect.addEventListener('change', () => {
-  updateUIForNetwork(networkSelect.value);
-  // Reset turnstile on network change
-  if (window.turnstile) window.turnstile.reset();
-  turnstileToken = null;
-});
 
 /* ─────────────────────────────────────────
    WALLET VALIDATION
@@ -106,33 +163,32 @@ function isValidEthAddress(addr) {
 function setInputState(state, message) {
   walletInput.classList.remove('valid', 'invalid');
   walletError.classList.remove('show');
-  if (state === 'valid') {
-    walletInput.classList.add('valid');
-  } else if (state === 'invalid') {
+  if (state === 'valid') walletInput.classList.add('valid');
+  else if (state === 'invalid') {
     walletInput.classList.add('invalid');
-    walletError.textContent = message || 'Invalid address';
+    walletError.textContent = message;
     walletError.classList.add('show');
   }
 }
 walletInput.addEventListener('input', () => {
-  const val = walletInput.value.trim();
-  if (!val || val.length < 42) { setInputState(''); return; }
-  setInputState(isValidEthAddress(val) ? 'valid' : 'invalid', 'Must be a valid 0x Ethereum address (42 characters)');
+  const v = walletInput.value.trim();
+  if (!v || v.length < 42) { setInputState(''); return; }
+  setInputState(isValidEthAddress(v) ? 'valid' : 'invalid', 'Must be a valid 0x address (42 chars)');
 });
 walletInput.addEventListener('blur', () => {
-  const val = walletInput.value.trim();
-  if (val && !isValidEthAddress(val)) setInputState('invalid', 'Must be a valid 0x Ethereum address (42 characters)');
+  const v = walletInput.value.trim();
+  if (v && !isValidEthAddress(v)) setInputState('invalid', 'Must be a valid 0x address (42 chars)');
 });
 walletInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') claimBtn.click(); });
 
 /* ─────────────────────────────────────────
-   LOADING STATE
+   LOADING
 ───────────────────────────────────────── */
 function setLoading(loading) {
   isLoading = loading;
-  claimBtn.disabled   = loading;
-  walletInput.disabled = loading;
-  networkSelect.disabled = loading;
+  claimBtn.disabled      = loading;
+  walletInput.disabled   = loading;
+  customSelect.style.pointerEvents = loading ? 'none' : '';
   claimBtn.classList.toggle('loading', loading);
 }
 
@@ -140,7 +196,7 @@ function setLoading(loading) {
    RESULT PANEL
 ───────────────────────────────────────── */
 function showSuccess(txHash, walletAddress, networkId) {
-  const net   = networksConfig[networkId] || { claimAmount: '?', symbol: '?', explorer: '#' };
+  const net   = networksConfig[networkId] || {};
   const short = walletAddress.slice(0, 6) + '…' + walletAddress.slice(-4);
   const explorerUrl = `${net.explorer}/tx/${txHash}`;
 
@@ -220,9 +276,7 @@ async function copyHash(hash) {
       }, 2000);
     }
     showToast('Transaction hash copied!', 'success');
-  } catch {
-    showToast('Copy failed — please copy manually', 'error');
-  }
+  } catch { showToast('Copy failed — please copy manually', 'error'); }
 }
 
 /* ─────────────────────────────────────────
@@ -255,9 +309,7 @@ async function fetchStats() {
     statDistrib.textContent = parseFloat(data.totalDistributed ?? 0).toFixed(2);
     statClaims.textContent  = Number(data.totalClaims ?? 0).toLocaleString();
   } catch {
-    statBalance.textContent = '—';
-    statDistrib.textContent = '—';
-    statClaims.textContent  = '—';
+    statBalance.textContent = statDistrib.textContent = statClaims.textContent = '—';
   } finally {
     setTimeout(() => refreshBtn.classList.remove('spinning'), 600);
   }
@@ -269,7 +321,6 @@ refreshBtn.addEventListener('click', fetchStats);
 ───────────────────────────────────────── */
 claimBtn.addEventListener('click', async () => {
   if (isLoading) return;
-
   const address = walletInput.value.trim();
   if (!address) { setInputState('invalid', 'Please enter your wallet address'); walletInput.focus(); return; }
   if (!isValidEthAddress(address)) { setInputState('invalid', 'Must be a valid Ethereum address (0x + 40 hex chars)'); walletInput.focus(); return; }
@@ -277,14 +328,13 @@ claimBtn.addEventListener('click', async () => {
 
   const networkId = currentNetwork;
   const net       = networksConfig[networkId];
-
   hideResult();
   setLoading(true);
   showToast(`Sending ${net?.claimAmount ?? ''} ${net?.symbol ?? ''}…`, 'info');
 
   try {
     const response = await fetch(`${API_BASE}/api/claim`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletAddress: address, captchaToken: turnstileToken, network: networkId }),
     });
@@ -299,16 +349,14 @@ claimBtn.addEventListener('click', async () => {
       turnstileToken = null;
       setTimeout(fetchStats, 3000);
     } else {
-      const msg = data.error || data.message || 'Something went wrong. Please try again.';
-      showError(msg);
-      showToast(msg, 'error');
+      const msg = data.error || 'Something went wrong. Please try again.';
+      showError(msg); showToast(msg, 'error');
       if (window.turnstile) window.turnstile.reset();
       turnstileToken = null;
     }
   } catch {
-    const msg = 'Network error — please check your connection and try again.';
-    showError(msg);
-    showToast(msg, 'error');
+    const msg = 'Network error — please check your connection.';
+    showError(msg); showToast(msg, 'error');
     if (window.turnstile) window.turnstile.reset();
     turnstileToken = null;
   } finally {
@@ -320,30 +368,38 @@ claimBtn.addEventListener('click', async () => {
    HELPERS
 ───────────────────────────────────────── */
 function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
 /* ─────────────────────────────────────────
    INIT
 ───────────────────────────────────────── */
 (async function init() {
-  // 1. Load network list from backend
+  // 1. Load network list
   try {
     const res  = await fetch(`${API_BASE}/api/networks`);
     const list = await res.json();
     list.forEach(net => { networksConfig[net.id] = net; });
-  } catch (err) {
-    console.error('Failed to load networks:', err);
-    // Fallback defaults
+  } catch {
     networksConfig = {
       sepolia:   { name: 'Ethereum Sepolia', symbol: 'ETH', claimAmount: 0.1, explorer: 'https://sepolia.etherscan.io' },
       pushchain: { name: 'PushChain Donut',  symbol: 'PC',  claimAmount: 1,   explorer: 'https://donut.push.network' },
     };
   }
 
-  // 2. Load Turnstile site key from backend
+  // 2. Build dropdown options
+  buildDropdownOptions();
+
+  // 3. Set initial trigger display
+  const firstNet = networksConfig[currentNetwork];
+  if (firstNet) {
+    selectedName.textContent   = firstNet.name;
+    selectedAmount.textContent = `${firstNet.claimAmount} ${firstNet.symbol} per request`;
+  }
+
+  // 4. Load Turnstile site key
   try {
     const res = await fetch(`${API_BASE}/api/config`);
     const { turnstileSiteKey } = await res.json();
@@ -355,13 +411,11 @@ function escapeHtml(str) {
         theme:              'auto',
       });
     }
-  } catch (err) {
-    console.error('Failed to load Turnstile config:', err);
-  }
+  } catch (err) { console.error('Turnstile config failed:', err); }
 
-  // 3. Apply initial network UI
-  updateUIForNetwork('sepolia');
+  // 5. Apply initial UI
+  updateUIForNetwork(currentNetwork);
 
-  // 4. Start stats refresh
+  // 6. Stats refresh
   setInterval(fetchStats, 60_000);
 })();

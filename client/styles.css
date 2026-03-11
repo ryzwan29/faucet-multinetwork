@@ -815,3 +815,138 @@ footer {
   pointer-events: none;
   display: flex;
 }
+
+/* ─── Custom Network Dropdown ─────────────────────────── */
+.custom-select {
+  position: relative;
+  user-select: none;
+}
+
+.custom-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--input-bg);
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.custom-select__trigger:hover,
+.custom-select[aria-expanded="true"] .custom-select__trigger {
+  border-color: var(--input-border-focus);
+  background: var(--card-bg);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.custom-select__selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.net-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.net-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.net-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.net-amount {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.custom-select__arrow {
+  color: var(--text-muted);
+  display: flex;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.custom-select[aria-expanded="true"] .custom-select__arrow {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* Dropdown list */
+.custom-select__options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow-hover);
+  list-style: none;
+  padding: 6px;
+  z-index: 200;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  /* Hidden state */
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.custom-select[aria-expanded="true"] .custom-select__options {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.custom-select__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.custom-select__option:hover {
+  background: var(--accent-dim);
+}
+
+.custom-select__option.selected {
+  background: var(--accent-dim);
+}
+
+.custom-select__option .net-amount {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.custom-select__option .net-name {
+  font-size: 0.875rem;
+}
+
+/* Remove old select styles (no longer used) */
+.select-wrap, .network-select, .select-icon { display: none; }
