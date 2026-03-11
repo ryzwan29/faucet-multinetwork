@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testnet Faucet — Free Testnet Tokens</title>
+  <meta name="description" content="Get free testnet tokens for development and testing. Supports Sepolia ETH and PushChain PC." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- ─── Header ─── -->
+  <header>
+    <div class="header-inner">
+      <a class="header-brand" href="#" aria-label="Testnet Faucet">
+        <div class="logo-wrap">
+          <img src="assets/logo.svg" alt="Logo" width="24" height="24" />
+        </div>
+        <div class="brand-text">
+          <h1>Testnet Faucet</h1>
+          <p>Get free testnet tokens for development</p>
+        </div>
+      </a>
+
+      <div class="header-right">
+        <div class="network-badge" id="headerNetworkBadge" aria-label="Selected network">
+          <span class="network-dot" aria-hidden="true"></span>
+          <span id="headerNetworkName">Ethereum Sepolia</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+          <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="iconMoon" class="hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Main ─── -->
+  <main>
+    <div class="container">
+
+      <!-- ─── Faucet Card ─── -->
+      <div class="card faucet-card">
+        <div class="card-header">
+          <h2 class="card-title">Request Testnet Tokens</h2>
+          <p class="card-subtitle">Instant delivery to your wallet</p>
+        </div>
+
+        <!-- Network Selector -->
+        <div class="input-group">
+          <label class="input-label" for="networkSelect">Network</label>
+          <div class="select-wrap">
+            <select id="networkSelect" class="network-select" aria-label="Select network">
+              <option value="sepolia">Ethereum Sepolia — 0.1 ETH</option>
+              <option value="pushchain">PushChain Donut — 1 PC</option>
+            </select>
+            <span class="select-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Amount Display -->
+        <div class="amount-display" id="amountDisplay">
+          <div class="eth-icon" aria-hidden="true" id="tokenIcon">
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="16,3 28,16 16,20.5 4,16" fill="rgba(255,255,255,0.9)"/>
+              <polygon points="16,20.5 28,16 16,29" fill="rgba(255,255,255,0.65)"/>
+              <polygon points="16,20.5 4,16 16,29" fill="rgba(255,255,255,0.45)"/>
+              <polygon points="16,3 28,16 16,20.5" fill="rgba(255,255,255,0.75)"/>
+            </svg>
+          </div>
+          <div class="amount-info">
+            <strong id="amountValue">0.1 ETH</strong>
+            <span id="amountSubtext">per request · Sepolia Testnet</span>
+          </div>
+        </div>
+
+        <!-- Wallet Input -->
+        <div class="input-group">
+          <label class="input-label" for="walletAddress">Wallet Address</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              id="walletAddress"
+              class="wallet-input"
+              placeholder="0x..."
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="walletError"
+              maxlength="42"
+            />
+            <span class="input-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              </svg>
+            </span>
+          </div>
+          <p id="walletError" class="field-error" role="alert" aria-live="polite"></p>
+        </div>
+
+        <!-- Cloudflare Turnstile CAPTCHA -->
+        <div class="captcha-wrap">
+          <div id="turnstileWidget"></div>
+        </div>
+
+        <!-- Claim Button -->
+        <button class="claim-btn" id="claimBtn" aria-label="Request tokens from faucet">
+          <div class="spinner" aria-hidden="true"></div>
+          <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span class="btn-text" id="claimBtnText">Request 0.1 ETH</span>
+        </button>
+
+        <!-- Info -->
+        <p class="info-text">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Limit: 1 claim per wallet and IP every 24 hours
+        </p>
+      </div>
+
+      <!-- ─── Result Panel ─── -->
+      <div class="card result-panel" id="resultPanel" role="status" aria-live="polite"></div>
+
+      <!-- ─── Status Panel ─── -->
+      <div class="card status-card">
+        <div class="status-header">
+          <span class="status-title">Faucet Status</span>
+          <button class="refresh-btn" id="refreshBtn" aria-label="Refresh faucet stats" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+          </button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-value" id="statBalance">—</span>
+            <span class="stat-label" id="statBalanceLabel">Balance</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statDistributed">—</span>
+            <span class="stat-label" id="statDistributedLabel">Distributed</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statClaims">—</span>
+            <span class="stat-label">Total Claims</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ─── Footer ─── -->
+  <footer>
+    <p class="footer-text">
+      Built for developers ·
+      <a id="footerExplorerLink" href="https://sepolia.etherscan.io" target="_blank" rel="noopener">Block Explorer</a>
+    </p>
+  </footer>
+
+</div>
+
+<!-- ─── Toast ─── -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true">
+  <span id="toastIcon" aria-hidden="true"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

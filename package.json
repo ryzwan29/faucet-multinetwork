@@ -1,0 +1,28 @@
+{
+  "name": "sepolia-eth-faucet",
+  "version": "1.0.0",
+  "description": "Ethereum Sepolia Testnet ETH Faucet — sends 0.1 ETH to developers",
+  "main": "server/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start":   "node server/server.js",
+    "dev":     "nodemon server/server.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "better-sqlite3":   "^9.4.3",
+    "cors":             "^2.8.5",
+    "dotenv":           "^16.4.5",
+    "ethers":           "^6.11.1",
+    "express":          "^4.18.3",
+    "express-rate-limit": "^7.2.0",
+    "helmet":           "^7.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "keywords": ["ethereum", "sepolia", "faucet", "testnet", "web3"],
+  "license": "MIT"
+}
