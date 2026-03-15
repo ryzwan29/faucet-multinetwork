@@ -33,9 +33,9 @@ const NETWORKS = {
   name:      'Republic AI',
   chainId:   77701n,
   symbol:    'RAI',             // sesuaikan sama symbol token-nya
-  explorer:  'https://explorer-republic.provewithryd.xyz', // sesuaikan
+  explorer:  'https://republicscan.provewithryd.xyz', // sesuaikan
   logo:      'public/networks/republicai.jpg',
-  getRpc:    () => process.env.REPUBLIC_RPC_URL || 'https://testnet-rpc-republic.provewithryd.xyz',
+  getRpc:    () => process.env.REPUBLIC_RPC_URL || 'https://testnet-evm-republic.provewithryd.xyz',
   getAmount: () => parseFloat(process.env.REPUBLIC_CLAIM_AMOUNT || '1'),
 },
 };
