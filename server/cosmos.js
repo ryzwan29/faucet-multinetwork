@@ -115,8 +115,10 @@ async function getClient(networkId) {
  */
 function isValidCosmosAddress(address, prefix) {
   try {
-    const decoded = bech32.decode(address);
-    return decoded.prefix === prefix && decoded.words.length > 0;
+    const lower = address.toLowerCase().trim();
+    if (!lower.startsWith(prefix + '1')) return false;
+    // Minimal length: prefix + '1' + 38 chars data
+    return lower.length >= prefix.length + 1 + 38;
   } catch {
     return false;
   }
