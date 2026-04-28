@@ -116,9 +116,11 @@ async function getClient(networkId) {
 function isValidCosmosAddress(address, prefix) {
   try {
     const lower = address.toLowerCase().trim();
+    // Beberapa Cosmos chain pakai underscore di prefix (e.g. addr_safro)
+    // yang tidak valid di bech32 standard, jadi validasi manual
     if (!lower.startsWith(prefix + '1')) return false;
-    // Minimal length: prefix + '1' + 38 chars data
-    return lower.length >= prefix.length + 1 + 38;
+    // Minimal length: prefix + '1' + minimal data
+    return lower.length >= prefix.length + 1 + 20;
   } catch {
     return false;
   }

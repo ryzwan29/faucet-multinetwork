@@ -181,8 +181,8 @@ function isValidCosmosAddress(addr, prefix) {
   try {
     const lower = addr.toLowerCase().trim();
     if (!lower.startsWith(prefix + '1')) return false;
-    // Minimal length check (prefix + '1' + 38 chars data)
-    return lower.length >= prefix.length + 1 + 38;
+    // Minimal length check (prefix + '1' + minimal data)
+    return lower.length >= prefix.length + 1 + 20;
   } catch {
     return false;
   }
@@ -379,14 +379,13 @@ refreshBtn.addEventListener('click', fetchStats);
 ───────────────────────────────────────── */
 claimBtn.addEventListener('click', async () => {
   if (isLoading) return;
+  const networkId = currentNetwork;
+  const net       = networksConfig[networkId];
   const address = walletInput.value.trim();
   if (!address) { setInputState('invalid', 'Please enter your wallet address'); walletInput.focus(); return; }
   const addrHint = getAddressHint(networkId);
   if (!isValidAddress(address, networkId)) { setInputState('invalid', addrHint.errorMsg); walletInput.focus(); return; }
   if (!turnstileToken) { showToast('Please complete the CAPTCHA first', 'error'); return; }
-
-  const networkId = currentNetwork;
-  const net       = networksConfig[networkId];
   hideResult();
   setLoading(true);
   showToast(`Sending ${net?.claimAmount ?? ''} ${net?.symbol ?? ''}…`, 'info');
