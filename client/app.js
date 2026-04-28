@@ -206,7 +206,7 @@ function getAddressHint(networkId) {
   const net = networksConfig[networkId];
   if (net && net.cosmos && net.bech32Prefix) {
     return {
-      placeholder: `${net.bech32Prefix}1abc...`,
+      placeholder: `${net.bech32Prefix}1...`,
       errorMsg: `Must be a valid ${net.name} address (${net.bech32Prefix}1...)`,
     };
   }
