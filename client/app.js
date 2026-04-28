@@ -102,8 +102,11 @@ customSelect.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') toggleDropdown(false);
 });
 
-// Close on outside click
+// Close on outside click — tapi jangan nutup kalau klik/scroll di dalam options
 document.addEventListener('click', () => toggleDropdown(false));
+selectOptions.addEventListener('click', (e) => e.stopPropagation());
+selectOptions.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+selectOptions.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
 
 /** Select a network */
 function selectNetwork(networkId) {
@@ -142,7 +145,13 @@ function updateUIForNetwork(networkId) {
   claimBtnText.textContent       = `Request ${net.claimAmount} ${net.symbol}`;
   statBalanceLabel.textContent   = `Balance (${net.symbol})`;
   statDistribLabel.textContent   = `${net.symbol} Distributed`;
-  footerExplorerLink.href        = net.explorer;
+  footerExplorerLink.href        = net.explorer || '#';
+
+  // Update address input placeholder sesuai tipe network
+  const hint = getAddressHint(networkId);
+  walletInput.placeholder = hint.placeholder;
+  walletInput.value       = '';
+  setInputState('');
 
   hideResult();
   fetchStats();
@@ -160,6 +169,52 @@ window.onTurnstileExpired = ()      => { turnstileToken = null; };
 function isValidEthAddress(addr) {
   return /^0x[0-9a-fA-F]{40}$/.test(addr.trim());
 }
+
+/**
+ * Validasi Cosmos bech32 address dengan prefix tertentu.
+ * Prefix bisa mengandung underscore (e.g. addr_safro).
+ */
+function isValidCosmosAddress(addr, prefix) {
+  // Bech32: prefix + '1' + data
+  // Prefix bisa a-z, digit, underscore (sebenarnya bech32 std hanya [a-z0-9] tapi
+  // beberapa Cosmos chain pakai underscore dalam human-readable part)
+  try {
+    const lower = addr.toLowerCase().trim();
+    if (!lower.startsWith(prefix + '1')) return false;
+    // Minimal length check (prefix + '1' + 38 chars data)
+    return lower.length >= prefix.length + 1 + 38;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validasi address sesuai tipe network.
+ */
+function isValidAddress(addr, networkId) {
+  const net = networksConfig[networkId];
+  if (net && net.cosmos && net.bech32Prefix) {
+    return isValidCosmosAddress(addr, net.bech32Prefix);
+  }
+  return isValidEthAddress(addr);
+}
+
+/**
+ * Ambil placeholder dan pesan error sesuai network.
+ */
+function getAddressHint(networkId) {
+  const net = networksConfig[networkId];
+  if (net && net.cosmos && net.bech32Prefix) {
+    return {
+      placeholder: `${net.bech32Prefix}1abc...`,
+      errorMsg: `Must be a valid ${net.name} address (${net.bech32Prefix}1...)`,
+    };
+  }
+  return {
+    placeholder: '0x...',
+    errorMsg: 'Must be a valid 0x address (42 chars)',
+  };
+}
 function setInputState(state, message) {
   walletInput.classList.remove('valid', 'invalid');
   walletError.classList.remove('show');
@@ -171,13 +226,16 @@ function setInputState(state, message) {
   }
 }
 walletInput.addEventListener('input', () => {
-  const v = walletInput.value.trim();
-  if (!v || v.length < 42) { setInputState(''); return; }
-  setInputState(isValidEthAddress(v) ? 'valid' : 'invalid', 'Must be a valid 0x address (42 chars)');
+  const v    = walletInput.value.trim();
+  const hint = getAddressHint(currentNetwork);
+  const minLen = (networksConfig[currentNetwork]?.cosmos) ? 10 : 42;
+  if (!v || v.length < minLen) { setInputState(''); return; }
+  setInputState(isValidAddress(v, currentNetwork) ? 'valid' : 'invalid', hint.errorMsg);
 });
 walletInput.addEventListener('blur', () => {
-  const v = walletInput.value.trim();
-  if (v && !isValidEthAddress(v)) setInputState('invalid', 'Must be a valid 0x address (42 chars)');
+  const v    = walletInput.value.trim();
+  const hint = getAddressHint(currentNetwork);
+  if (v && !isValidAddress(v, currentNetwork)) setInputState('invalid', hint.errorMsg);
 });
 walletInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') claimBtn.click(); });
 
@@ -323,7 +381,8 @@ claimBtn.addEventListener('click', async () => {
   if (isLoading) return;
   const address = walletInput.value.trim();
   if (!address) { setInputState('invalid', 'Please enter your wallet address'); walletInput.focus(); return; }
-  if (!isValidEthAddress(address)) { setInputState('invalid', 'Must be a valid Ethereum address (0x + 40 hex chars)'); walletInput.focus(); return; }
+  const addrHint = getAddressHint(networkId);
+  if (!isValidAddress(address, networkId)) { setInputState('invalid', addrHint.errorMsg); walletInput.focus(); return; }
   if (!turnstileToken) { showToast('Please complete the CAPTCHA first', 'error'); return; }
 
   const networkId = currentNetwork;

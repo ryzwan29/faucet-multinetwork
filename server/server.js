@@ -112,12 +112,15 @@ async function verifyTurnstile(token, remoteIp) {
 app.get('/api/networks', (req, res) => {
   const list = Object.entries(faucet.NETWORKS).map(([id, net]) => ({
     id,
-    name:        net.name,
-    symbol:      net.symbol,
-    chainId:     Number(net.chainId),
-    explorer:    net.explorer,
-    logo:        net.logo || `public/networks/${id}.svg`,  // ← tambah ini
-    claimAmount: net.getAmount(),
+    name:         net.name,
+    symbol:       net.symbol,
+    // Cosmos chainId adalah string (e.g. 'safro-test-1'), EVM adalah bigint
+    chainId:      net.cosmos ? net.chainId : Number(net.chainId),
+    explorer:     typeof net.explorer === 'function' ? net.explorer() : net.explorer,
+    logo:         net.logo || `public/networks/${id}.svg`,
+    claimAmount:  net.getAmount(),
+    cosmos:       net.cosmos || false,
+    bech32Prefix: net.bech32Prefix || null,
   }));
   res.json(list);
 });
@@ -143,13 +146,23 @@ app.post('/api/claim', claimLimiter, async (req, res) => {
   }
   const net = faucet.NETWORKS[networkId];
 
-  /* 2. Validate wallet address */
+  /* 2. Validate wallet address (EVM atau Cosmos) */
   if (!walletAddress || typeof walletAddress !== 'string') {
     return res.status(400).json({ error: 'walletAddress is required.' });
   }
   const wallet = walletAddress.trim();
-  if (!isValidEthAddress(wallet)) {
-    return res.status(400).json({ error: 'Invalid Ethereum address. Must be 0x followed by 40 hex characters.' });
+  if (net.cosmos) {
+    // Cosmos: validasi bech32 dengan prefix network
+    if (!faucet.cosmos.isValidCosmosAddress(wallet, net.bech32Prefix)) {
+      return res.status(400).json({
+        error: `Invalid ${net.name} address. Must start with "${net.bech32Prefix}1..." (bech32 format).`,
+      });
+    }
+  } else {
+    // EVM: validasi 0x hex address
+    if (!isValidEthAddress(wallet)) {
+      return res.status(400).json({ error: 'Invalid Ethereum address. Must be 0x followed by 40 hex characters.' });
+    }
   }
 
   /* 3. Validate CAPTCHA */
@@ -170,15 +183,19 @@ app.post('/api/claim', claimLimiter, async (req, res) => {
     });
   }
 
-  /* 5. Send tokens */
+  /* 5. Send tokens (EVM atau Cosmos) */
   let txHash;
   try {
-    const result = await faucet.sendEth(wallet, networkId);
+    const result = net.cosmos
+      ? await faucet.cosmos.sendCosmos(wallet, networkId)
+      : await faucet.sendEth(wallet, networkId);
     txHash = result.txHash;
   } catch (err) {
     console.error(`[CLAIM:${networkId}] Transaction failed:`, err.message);
     return res.status(503).json({
-      error: err.message.includes('balance') ? err.message : 'Transaction failed. Please try again in a moment.',
+      error: err.message.includes('balance') || err.message.includes('Invalid')
+        ? err.message
+        : 'Transaction failed. Please try again in a moment.',
     });
   }
 
@@ -213,7 +230,9 @@ app.get('/api/stats', async (req, res) => {
   const net = faucet.NETWORKS[networkId];
   try {
     const [balance, stats] = await Promise.all([
-      faucet.getFaucetBalance(networkId),
+      net.cosmos
+        ? faucet.cosmos.getCosmosFaucetBalance(networkId)
+        : faucet.getFaucetBalance(networkId),
       Promise.resolve(db.getStats(networkId)),
     ]);
     return res.json({

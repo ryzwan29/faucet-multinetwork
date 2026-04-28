@@ -258,7 +258,7 @@ main {
   transition: box-shadow 0.3s ease, border-color 0.3s ease, background 0.4s ease;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card:hover { box-shadow: var(--card-shadow-hover); }
@@ -907,6 +907,10 @@ footer {
   z-index: 200;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+
+  /* Tampilkan tepat 4 item, scroll kalau lebih */
+  max-height: calc((28px + 20px) * 4 + 12px);
+  overflow-y: auto;
 
   /* Hidden state */
   opacity: 0;
