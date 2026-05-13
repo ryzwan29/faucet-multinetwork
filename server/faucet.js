@@ -53,7 +53,7 @@ const NETWORKS = {
   // ── Cosmos SDK networks ──
   safrochain: {
     name:         'SafroChain',
-    chainId:      'safro-test-1',
+    chainId:      'safro-testnet-1',
     symbol:       'SAF',
     explorer:     process.env.SAFROCHAIN_EXPLORER || 'https://explorer.safrochain.com',
     logo:         'public/networks/safrochain.jpg',

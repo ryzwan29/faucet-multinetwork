@@ -16,14 +16,18 @@
 'use strict';
 
 const { SigningStargateClient, GasPrice } = require('@cosmjs/stargate');
-const { DirectSecp256k1HdWallet }         = require('@cosmjs/proto-signing');
+const { DirectSecp256k1HdWallet, makeCosmoshubPath } = require('@cosmjs/proto-signing');
 const { bech32 }                          = require('bech32');
+
+// Standard Cosmos HD path (coin type 118, account 0, index 0)
+// Same as used by Safrochain reference implementations
+const COSMOS_HD_PATH = makeCosmoshubPath(0);
 
 /* ─── Cosmos Network Registry ─── */
 const COSMOS_NETWORKS = {
   safrochain: {
     name:         'SafroChain',
-    chainId:      'safro-test-1',
+    chainId:      'safro-testnet-1',
     symbol:       'SAF',
     denom:        () => 'usaf',
     explorer:     () => process.env.SAFROCHAIN_EXPLORER || 'https://explorer.safrochain.com',
@@ -94,6 +98,7 @@ async function getClient(networkId) {
   if (!_clients[networkId]) {
     const wallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
       prefix: net.bech32Prefix,
+      hdPaths: [COSMOS_HD_PATH],
     });
     const [account] = await wallet.getAccounts();
     const client = await SigningStargateClient.connectWithSigner(rpc, wallet, {
@@ -109,18 +114,27 @@ async function getClient(networkId) {
 
 /**
  * Validasi Cosmos bech32 address dengan prefix tertentu.
+ * Menggunakan library bech32 untuk full checksum validation.
  * @param {string} address
  * @param {string} prefix  — e.g. 'addr_safro'
  * @returns {boolean}
  */
 function isValidCosmosAddress(address, prefix) {
   try {
-    const lower = address.toLowerCase().trim();
-    // Beberapa Cosmos chain pakai underscore di prefix (e.g. addr_safro)
-    // yang tidak valid di bech32 standard, jadi validasi manual
-    if (!lower.startsWith(prefix + '1')) return false;
-    // Minimal length: prefix + '1' + minimal data
-    return lower.length >= prefix.length + 1 + 20;
+    const trimmed = address.trim().toLowerCase();
+
+    // Quick prefix check
+    if (!trimmed.startsWith(prefix + '1')) return false;
+
+    // Full bech32 decode with checksum validation
+    const decoded = bech32.decode(trimmed);
+
+    // Verify prefix matches
+    if (decoded.prefix !== prefix) return false;
+
+    // Verify data length (20 bytes for secp256k1 addresses)
+    const data = bech32.fromWords(decoded.words);
+    return data.length === 20 || data.length === 32;
   } catch {
     return false;
   }
