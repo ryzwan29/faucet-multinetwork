@@ -121,13 +121,14 @@ async function getClient(networkId) {
  */
 function isValidCosmosAddress(address, prefix) {
   try {
-    const trimmed = address.trim().toLowerCase();
+    // Strip invisible/zero-width characters and whitespace, then lowercase
+    const sanitized = address.replace(/[^\x21-\x7E]/g, '').toLowerCase();
 
     // Quick prefix check
-    if (!trimmed.startsWith(prefix + '1')) return false;
+    if (!sanitized.startsWith(prefix + '1')) return false;
 
     // Full bech32 decode with checksum validation
-    const decoded = bech32.decode(trimmed);
+    const decoded = bech32.decode(sanitized);
 
     // Verify prefix matches
     if (decoded.prefix !== prefix) return false;
@@ -177,7 +178,10 @@ async function sendCosmos(recipientAddress, networkId) {
   const net = COSMOS_NETWORKS[networkId];
   if (!net) throw new Error(`Unknown Cosmos network: ${networkId}`);
 
-  if (!isValidCosmosAddress(recipientAddress, net.bech32Prefix)) {
+  // Sanitize: strip invisible chars, lowercase
+  const cleanAddress = recipientAddress.replace(/[^\x21-\x7E]/g, '').toLowerCase();
+
+  if (!isValidCosmosAddress(cleanAddress, net.bech32Prefix)) {
     throw new Error(`Invalid ${net.name} address. Must start with "${net.bech32Prefix}1..."`);
   }
 
@@ -197,7 +201,7 @@ async function sendCosmos(recipientAddress, networkId) {
 
   const result = await client.sendTokens(
     senderAddress,
-    recipientAddress,
+    cleanAddress,
     [{ denom, amount: claimMicro.toString() }],
     'auto',
     'Faucet claim via faucet-multinetwork'
@@ -207,7 +211,7 @@ async function sendCosmos(recipientAddress, networkId) {
     throw new Error(`Transaction failed: ${result.rawLog}`);
   }
 
-  console.log(`[COSMOS:${networkId}] Sent ${claimDisplay} ${net.symbol} (${claimMicro} ${denom}) → ${recipientAddress} | tx: ${result.transactionHash}`);
+  console.log(`[COSMOS:${networkId}] Sent ${claimDisplay} ${net.symbol} (${claimMicro} ${denom}) → ${cleanAddress} | tx: ${result.transactionHash}`);
   return { txHash: result.transactionHash };
 }
 
