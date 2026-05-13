@@ -153,7 +153,9 @@ app.post('/api/claim', claimLimiter, async (req, res) => {
   const wallet = walletAddress.trim();
   if (net.cosmos) {
     // Cosmos: validasi bech32 dengan prefix network
-    if (!faucet.cosmos.isValidCosmosAddress(wallet, net.bech32Prefix)) {
+    const isValid = faucet.cosmos.isValidCosmosAddress(wallet, net.bech32Prefix);
+    console.log(`[CLAIM:${networkId}] Address validation: "${wallet}" (len=${wallet.length}) prefix="${net.bech32Prefix}" → ${isValid}`);
+    if (!isValid) {
       return res.status(400).json({
         error: `Invalid ${net.name} address. Must start with "${net.bech32Prefix}1..." (bech32 format).`,
       });
